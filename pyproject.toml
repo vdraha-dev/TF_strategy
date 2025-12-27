@@ -1,0 +1,80 @@
+[project]
+name = "tf-strategy"
+version = "0.1.0"
+description = "Implementation of the Trend Following trading strategy for Binance"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "black>=25.12.0",
+    "ruff>=0.14.10",
+]
+
+
+# Black settings
+[tool.black]
+line-length = 88
+target-version = ['py314']
+include = '\.pyi?$'
+skip-string-normalization = true 
+extend-exclude = '''
+/(
+  | migrations
+  | venv
+  | build
+)/
+'''
+
+# Ruff settings
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+select = [
+    "E",      # pycodestyle errors - checks PEP 8 style violations like indentation, 
+              # whitespace issues, line length problems, syntax errors
+    
+    "W",      # pycodestyle warnings - detects trailing whitespace, blank line issues,
+              # deprecated features, and other style warnings
+    
+    "F",      # pyflakes - finds logical errors: unused imports/variables, 
+              # undefined names, duplicate arguments, unreachable code
+    
+    "I",      # isort - automatically sorts and organizes imports into groups:
+              # standard library → third-party → first-party → local modules
+    
+    "B",      # flake8-bugbear - catches likely bugs and design problems:
+              # mutable default arguments, function calls in defaults, raise without from
+    
+    "C4",     # flake8-comprehensions - suggests more efficient list/dict/set 
+              # comprehensions, removes unnecessary generator expressions
+    
+    "UP",     # pyupgrade - modernizes code to use newer Python syntax:
+              # updates type hints, replaces .format() with f-strings, removes outdated patterns
+    
+    "ARG",    # flake8-unused-arguments - detects unused function/method arguments
+              # and suggests removing them or prefixing with underscore
+    
+    "SIM",    # flake8-simplify - simplifies code logic: removes unnecessary conditions,
+              # merges nested ifs, suggests simpler alternatives for common patterns
+]
+
+
+ignore = [
+    "E501",   # line too long (це вже контролює Black)
+    "B008",   # do not perform function calls in argument defaults
+    "C901",   # too complex
+]
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "migrations",
+    "build",
+]
+
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
