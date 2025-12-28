@@ -9,7 +9,7 @@ class Symbol(CommonSymbol):
 
 
 class Kline(CommonKline):
-    @staticmethod
+    @classmethod
     def from_list(cls, raw: list) -> Kline:
         return cls(
             open_time=raw[0],
