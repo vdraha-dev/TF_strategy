@@ -84,3 +84,8 @@ exclude = [
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
