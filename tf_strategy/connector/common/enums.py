@@ -16,4 +16,4 @@ class TimeInterval(StrEnum):
     _12h = "12h"
     _1d = "1d"
     _2d = "3d"
-    _1m = "1m"
+    _1M = "1M"
