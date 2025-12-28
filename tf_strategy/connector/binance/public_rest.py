@@ -4,9 +4,11 @@ from datetime import datetime
 import httpx
 import orjson
 
-from .enums import TimeInterval
+from tf_strategy.connector.common.enums import TimeInterval
+from tf_strategy.connector.common.schemas import Kline, Symbol
+
 from .rest_paths import rest_path
-from .schemas import Symbol
+from .schemas import Kline as BinanceKline
 from .tools import dt_to_ms, tz_to_offset
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ class BinancePublicREST:
         start_ts: datetime | None = None,
         end_ts: datetime | None = None,
         timezone: str | None = None,
-    ) -> list[list[str | int]]:
+    ) -> list[Kline]:
         """
         Fetch historical kline/candlestick bars for a symbol.
 
@@ -61,7 +63,7 @@ class BinancePublicREST:
                     "1756.87402397", "28.46694368", "0"
                 ]
         """
-        klines: list[list[str | int]] = []
+        klines: list[Kline] = []
 
         params = {
             "symbol": symbol.symbol,
@@ -96,7 +98,7 @@ class BinancePublicREST:
                 url=rest_path.public.klines, params=params
             )
             res.raise_for_status()
-            klines = orjson.loads(res.content)
+            klines = [BinanceKline.from_list(i) for i in orjson.loads(res.content)]
 
         except httpx.HTTPStatusError as e:
             logger.error(
