@@ -6,7 +6,13 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "black>=25.12.0",
+    "httpx>=0.28.1",
+    "orjson>=3.11.5",
+    "pydantic>=2.12.5",
+    "pytz>=2025.2",
     "ruff>=0.14.10",
+    "tenacity>=9.1.2",
+    "websockets>=15.0.1",
 ]
 
 
@@ -29,7 +35,7 @@ extend-exclude = '''
 line-length = 88
 target-version = "py314"
 
-select = [
+lint.select = [
     "E",      # pycodestyle errors - checks PEP 8 style violations like indentation, 
               # whitespace issues, line length problems, syntax errors
     
@@ -59,7 +65,7 @@ select = [
 ]
 
 
-ignore = [
+lint.ignore = [
     "E501",   # line too long (це вже контролює Black)
     "B008",   # do not perform function calls in argument defaults
     "C901",   # too complex
