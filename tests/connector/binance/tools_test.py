@@ -1,8 +1,7 @@
 from datetime import datetime
 
 import pytest
-
-from tf_strategy.binance.tools import tz_to_offset
+from tf_strategy.connector.binance.tools import tz_to_offset
 
 
 class TestTzToOffset:
