@@ -1,6 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import pytz
+
 
 def tz_to_offset(tz_name: str, dt: datetime = None) -> str:
     """
@@ -33,10 +35,11 @@ def dt_to_ms(dt: datetime) -> int:
     return int(dt.timestamp() * 1000 + dt.microsecond // 1000)
 
 
-def ms_to_df(timestamp: float, tz_name: str = None) -> datetime:
+def ms_to_dt(timestamp: float, tz_name: str = None) -> datetime:
     """Convert POSIX timestamp in a datetime object.
 
-    A timezone info object may be passed in as well.
+    A timezone info object may be passed in as well,
+    as default using UTC.
 
     Args:
         timestamp (float): POSIX timestam in miliseconds.
@@ -47,5 +50,5 @@ def ms_to_df(timestamp: float, tz_name: str = None) -> datetime:
     ms_sec = timestamp % 1000
 
     return datetime.fromtimestamp(
-        timestamp=sec, tz=ZoneInfo(tz_name) if tz_name else None
+        timestamp=sec, tz=ZoneInfo(tz_name) if tz_name else pytz.UTC
     ).replace(microsecond=ms_sec * 1000)
