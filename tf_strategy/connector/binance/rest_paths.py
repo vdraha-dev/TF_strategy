@@ -3,6 +3,19 @@ from pydantic import BaseModel, Field, computed_field, model_validator
 __all__ = ["rest_path"]
 
 
+class PublicSubPath(BaseModel):
+    version: str
+
+    @computed_field
+    @property
+    def klines(self) -> str:
+        return f"/api/{self.version}/klines"
+
+
+class PrivateSubPath(BaseModel):
+    version: str
+
+
 class Path(BaseModel):
     version: str = Field(default="v3")
     public: PublicSubPath | None = None
@@ -16,16 +29,3 @@ class Path(BaseModel):
 
 
 rest_path = Path()
-
-
-class PublicSubPath(BaseModel):
-    version: str
-
-    @computed_field
-    @property
-    def klines(self) -> str:
-        return f"/api/{self.version}/klines"
-
-
-class PrivateSubPath(BaseModel):
-    version: str
