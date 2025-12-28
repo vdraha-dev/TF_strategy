@@ -1,4 +1,5 @@
 import pytest
+
 from tf_strategy.connector.common.schemas import Symbol
 
 
