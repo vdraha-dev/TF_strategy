@@ -26,3 +26,8 @@ def tz_to_offset(tz_name: str, dt: datetime = None) -> str:
     hours = total_minutes // 60
     minutes = abs(total_minutes % 60)
     return f"{hours:+03d}:{minutes:02d}"
+
+
+def dt_to_ms(dt: datetime) -> int:
+    """Convert a datetime object to a POSIX timestamp in milliseconds."""
+    return int(dt.timestamp() * 1000)
