@@ -24,8 +24,8 @@ class BinancePublicREST:
         interval: TimeInterval,
         *,
         limit: int | None = None,
-        start_ts: datetime | None = None,
-        end_ts: datetime | None = None,
+        start_ts: datetime | int | None = None,
+        end_ts: datetime | int | None = None,
         timezone: str | None = None,
     ) -> list[Kline]:
         """
@@ -86,9 +86,15 @@ class BinancePublicREST:
                 limit = 1000
             params["limit"] = limit
         if start_ts:
-            params["startTime"] = dt_to_ms(start_ts)
+            if isinstance(start_ts, datetime):
+                params["startTime"] = dt_to_ms(start_ts)
+            else:
+                params["startTime"] = start_ts
         if end_ts:
-            params["endTime"] = dt_to_ms(end_ts)
+            if isinstance(end_ts, datetime):
+                params["endTime"] = dt_to_ms(end_ts)
+            else:
+                params["endTime"] = end_ts
         if timezone:
             params["timeZone"] = tz_to_offset(timezone)
 
