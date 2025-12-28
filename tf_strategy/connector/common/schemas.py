@@ -1,6 +1,7 @@
-from pydantic import BaseModel, PrivateAttr, computed_field, field_validator
 from decimal import Decimal
-from datetime import datetime
+
+from pydantic import BaseModel, PrivateAttr, computed_field, field_validator
+
 
 class Symbol(BaseModel):
     first: str
@@ -39,14 +40,14 @@ class Symbol(BaseModel):
 
 
 class Kline(BaseModel):
-    open_time: int                  # POSIX timestamp in ms
+    open_time: int  # POSIX timestamp in ms
     open_price: Decimal
     high_price: Decimal
     low_price: Decimal
     close_price: Decimal
     volume: Decimal
-    close_time: int                 # POSIX timestamp in ms
+    close_time: int  # POSIX timestamp in ms
     quote_asset_volume: Decimal
     number_of_trades: int
     taker_buy_base_volume: Decimal  # Taker buy base asset volume
-    taker_buy_quote_volume: Decimal # Taker buy quote asset volume
+    taker_buy_quote_volume: Decimal  # Taker buy quote asset volume
