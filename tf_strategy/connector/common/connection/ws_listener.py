@@ -1,40 +1,56 @@
 import asyncio
 import logging
+
 import websockets
-from typing import Callable
+
+from tf_strategy.common.async_event import AsyncEvent, AsyncHandler
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncWSListener:
-    def __init__(self, url: str, message_handler: Callable[[str], None], reconnect_delay: float = 5.0):
+    """Lightweight listener for WS connection."""
+
+    def __init__(
+        self,
+        url: str,
+        reconnect_delay: float = 5.0,
+    ):
         self.url = url
-        self.message_handler = message_handler
         self.reconnect_delay = reconnect_delay
         self._task: asyncio.Task | None = None
         self._send_task: asyncio.Task | None = None
         self._stopped = False
         self._ws: websockets.WebSocketClientProtocol | None = None
         self._send_queue: asyncio.Queue[str | None] = asyncio.Queue()
+        self._eventer = AsyncEvent()
 
     async def _listen(self):
         while not self._stopped:
             try:
                 async with websockets.connect(self.url) as ws:
                     self._ws = ws
+
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
                     async for msg in ws:
-                        await self.message_handler(msg)
+                        await self._eventer.emit(msg)
             except (websockets.ConnectionClosed, OSError) as e:
                 self._ws = None
 
-                logger.error(f"[{self.url}] Connection lost: {e}. Reconnecting in {self.reconnect_delay}s...")
+                logger.error(
+                    f"[{self.url}] Connection lost: {e}. Reconnecting in {self.reconnect_delay}s..."
+                )
                 await asyncio.sleep(self.reconnect_delay)
+            except Exception as e:
+                logger.error(
+                    f"[{self.url}] Something when wrong: {e}. Connection will be closed."
+                )
 
     async def _send_loop(self):
         while self._ws is not None and not self._stopped:
             msg = await self._send_queue.get()
-            
+
             if msg is None:
                 return
 
@@ -43,8 +59,7 @@ class AsyncWSListener:
                     await self._ws.send(msg)
                 except Exception as e:
                     logger.error(f"[{self.url}] Failed to send message: {e}")
-                    
-                    
+
     async def _close_send_loop(self):
         # need for close _send_loop
         if self._send_task and not self._send_task.done():
@@ -52,13 +67,15 @@ class AsyncWSListener:
             await self._send_task
 
     def start(self):
+        """Starts the listener for ws connection."""
         self._stopped = False
         self._task = asyncio.create_task(self._listen())
 
     async def stop(self):
+        """Stops the listener for ws connection."""
         self._stopped = True
         await self._close_send_loop()
-        if self._task:            
+        if self._task:
             self._task.cancel()
             await asyncio.gather(self._task, return_exceptions=True)
 
@@ -67,3 +84,26 @@ class AsyncWSListener:
         if msg is None:
             return
         await self._send_queue.put(msg)
+
+    async def add_handler(self, key: str, handler: AsyncHandler):
+        """Add hendler to this listener.
+
+        Args:
+            key (str): Unique identifier for the handler
+            handler (AsyncHandler): Asynchronous callable object for hotifications:
+                Example:
+                    async def my_handler(some_arg1, some_arg2, *args, **kwargs):...
+        """
+        await self._eventer.add(key, handler)
+
+    async def remove_handler(self, key: str):
+        """Remove handler from this listener.
+
+        Args:
+            key (str):  Unique identifier for the handler
+        """
+        await self._eventer.remove(key)
+
+    def is_empty(self) -> bool:
+        """If there is at least one handler for this listener, returns True"""
+        return self._eventer.is_empty()
