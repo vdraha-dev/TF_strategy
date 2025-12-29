@@ -13,7 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 class BinancePublicWS:
+    """Client for Binance public WebSocket subscriptions."""
+    
     def __init__(self, base_url: str):
+        """
+        Initialize the BinancePublicWS client.
+
+        Args:
+            base_url (str): Base URL for Binance WebSocket API.
+        """
+
         self._base_url = base_url
         self._subscriptions: dict[KlineKey, AsyncWSListener] = {}
         self._handlers: dict[str, HandlerToken] = {}
@@ -24,6 +33,20 @@ class BinancePublicWS:
         time_interval: TimeInterval,
         handler: AsyncHandler,
     ) -> str:
+        """
+        Subscribe to Kline (candlestick) events for a given symbol and time interval.
+
+        Creates a new WebSocket connection if it does not exist,
+        and adds an async handler to process incoming messages.
+
+        Args:
+            symbol (Symbol): Symbol to subscribe.
+            time_interval (TimeInterval): Candle timeframe (e.g., 1m, 5m).
+            handler (AsyncHandler): Asynchronous function/coroutine to handle messages.
+
+        Returns:
+            str: Unique handler token, used for unsubscribing.
+        """
         subscr_key = WSKeyCreator.kline_key(symbol, time_interval)
         token = str(uuid4())
 
@@ -51,6 +74,19 @@ class BinancePublicWS:
         symbol: Symbol | None = None,
         time_interval: TimeInterval | None = None,
     ):
+        """
+        Unsubscribe from Kline events.
+
+        Can unsubscribe by:
+        - handler_token
+        - symbol and time_interval (remove all handlers)
+        - symbol (unsubscribe from all timeframes)
+
+        Args:
+            handler_token (str | None, optional): Handler token for unsubscribing. Defaults to None.
+            symbol (Symbol | None, optional): Symbol to unsubscribe from. Defaults to None.
+            time_interval (TimeInterval | None, optional): Candle timeframe for unsubscribing. Defaults to None.
+        """
         if handler_token:
             # if all parameters are passed or only the handler identifier,
             # this block will be executed
@@ -89,9 +125,23 @@ class BinancePublicWS:
             for key in keys:
                 await self._kline_unsubscribe_all_for_key(symbol, key.time_interval)
 
+        else:
+            logger.warning(
+                "Invalid parameters passed. Parameters cannot be empty or contain only TimeInterval."
+            )
+
     async def _kline_unsubscribe_all_for_key(
         self, symbol: Symbol, time_interval: TimeInterval
     ):
+        """
+        Internal method to fully unsubscribe from Kline events by key.
+
+        Closes the WebSocket connection and removes all associated handlers.
+
+        Args:
+            symbol (Symbol): Symbol to unsubscribe.
+            time_interval (TimeInterval): Candle timeframe to unsubscribe.
+        """
         subscr_key = WSKeyCreator.kline_key(symbol, time_interval)
 
         subscription = self._subscriptions.pop(subscr_key, None)
