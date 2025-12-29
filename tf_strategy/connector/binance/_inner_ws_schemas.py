@@ -18,7 +18,7 @@ class HandlerToken:
 
 
 class WSKeyCreator:
-    """Class for creating uniquely interpreted keys for each WS subscription """
+    """Class for creating uniquely interpreted keys for each WS subscription"""
 
     @classmethod
     def kline_key(cls, symbol: Symbol, time_interval: TimeInterval) -> KlineKey:
