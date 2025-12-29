@@ -14,9 +14,11 @@ class AsyncWSListener:
     def __init__(
         self,
         url: str,
+        msg_preprocessing: AsyncHandler | None = None,
         reconnect_delay: float = 5.0,
     ):
         self.url = url
+        self.msg_preprocessing = msg_preprocessing
         self.reconnect_delay = reconnect_delay
         self._task: asyncio.Task | None = None
         self._send_task: asyncio.Task | None = None
@@ -34,6 +36,8 @@ class AsyncWSListener:
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
                     async for msg in ws:
+                        if self.msg_preprocessing:
+                            msg = await self.msg_preprocessing(msg)
                         await self._eventer.emit(msg)
             except (websockets.ConnectionClosed, OSError) as e:
                 self._ws = None
