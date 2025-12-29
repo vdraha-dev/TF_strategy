@@ -8,8 +8,8 @@ from tf_strategy.connector.common.enums import TimeInterval
 from tf_strategy.connector.common.schemas import Kline, Symbol
 
 from .rest_paths import rest_path
-from .schemas import Kline as BinanceKline
-from .tools import dt_to_ms, tz_to_offset
+from ..schemas import Kline as BinanceKline
+from ..tools import dt_to_ms, tz_to_offset
 
 logger = logging.getLogger(__name__)
 

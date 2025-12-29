@@ -6,7 +6,7 @@ from tf_strategy.connector.common.connection.ws_listener import AsyncWSListener
 from tf_strategy.connector.common.enums import TimeInterval
 
 from ._inner_ws_schemas import HandlerToken, KlineKey, WSKeyCreator
-from .schemas import Symbol
+from ..schemas import Symbol
 from .ws_paths import ws_path
 
 logger = logging.getLogger(__name__)
