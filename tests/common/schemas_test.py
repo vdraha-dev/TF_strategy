@@ -1,6 +1,6 @@
 import pytest
 
-from tf_strategy.connector.common.schemas import Symbol
+from tf_strategy.common.schemas import Symbol
 
 
 class TestSymbol:

@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pytest
 import pytz
-from tf_strategy.connector.binance.rest.public_rest import BinancePublicREST
-from tf_strategy.connector.binance.tools import dt_to_ms, ms_to_dt
-from tf_strategy.connector.common.enums import TimeInterval
+from tf_strategy.binance.rest.public_rest import BinancePublicREST
+from tf_strategy.binance.tools import dt_to_ms, ms_to_dt
+from tf_strategy.common.enums import TimeInterval
 
 
 @pytest.mark.integration
