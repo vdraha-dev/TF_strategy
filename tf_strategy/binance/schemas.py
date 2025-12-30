@@ -24,3 +24,19 @@ class Kline(CommonKline):
             taker_buy_base_volume=Decimal(raw[9]),
             taker_buy_quote_volume=Decimal(raw[10]),
         )
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> Kline:
+        return cls(
+            open_time=raw["t"],
+            open_price=Decimal(raw["o"]),
+            high_price=Decimal(raw["h"]),
+            low_price=Decimal(raw["l"]),
+            close_price=Decimal(raw["c"]),
+            volume=Decimal(raw["v"]),
+            close_time=raw["T"],
+            quote_asset_volume=Decimal(raw["q"]),
+            number_of_trades=int(raw["n"]),
+            taker_buy_base_volume=Decimal(raw["V"]),
+            taker_buy_quote_volume=Decimal(raw["Q"]),
+        )
