@@ -20,17 +20,22 @@ class AsyncWSListener:
         self.url = url
         self.msg_handler = msg_handler
         self.reconnect_delay = reconnect_delay
+
         self._task: asyncio.Task | None = None
         self._send_task: asyncio.Task | None = None
-        self._stopped = False
-        self._ws: websockets.WebSocketClientProtocol | None = None
+        self._stopped = True
+
+        self._ws: websockets.ClientConnection | None = None
         self._send_queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+        self._is_connected = asyncio.Event()
 
     async def _listen(self):
         while not self._stopped:
             try:
                 async with websockets.connect(self.url) as ws:
                     self._ws = ws
+                    self._is_connected.set()
 
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
@@ -43,10 +48,6 @@ class AsyncWSListener:
                     f"[{self.url}] Connection lost: {e}. Reconnecting in {self.reconnect_delay}s..."
                 )
                 await asyncio.sleep(self.reconnect_delay)
-            except Exception as e:
-                logger.error(
-                    f"[{self.url}] Something when wrong: {e}. Connection will be closed."
-                )
 
     async def _send_loop(self):
         while self._ws is not None and not self._stopped:
@@ -67,18 +68,21 @@ class AsyncWSListener:
             await self._send_queue.put(None)
             await self._send_task
 
-    def start(self):
+    async def start(self):
         """Starts the listener for ws connection."""
-        self._stopped = False
-        self._task = asyncio.create_task(self._listen())
+        if self._stopped:
+            self._stopped = False
+            self._task = asyncio.create_task(self._listen())
+            await self._is_connected.wait()
 
     async def stop(self):
         """Stops the listener for ws connection."""
-        self._stopped = True
-        await self._close_send_loop()
-        if self._task:
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
+        if not self._stopped:
+            self._stopped = True
+            await self._close_send_loop()
+            if self._task:
+                self._task.cancel()
+                await asyncio.gather(self._task, return_exceptions=True)
 
     async def send(self, msg: str):
         """Adds a message to the queue for sending."""
