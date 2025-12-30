@@ -4,12 +4,12 @@ from datetime import datetime
 import httpx
 import orjson
 
-from tf_strategy.connector.common.enums import TimeInterval
-from tf_strategy.connector.common.schemas import Kline, Symbol
+from tf_strategy.common.enums import TimeInterval
+from tf_strategy.common.schemas import Kline, Symbol
 
-from .rest_paths import rest_path
 from ..schemas import Kline as BinanceKline
 from ..tools import dt_to_ms, tz_to_offset
+from .rest_paths import rest_path
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ import logging
 
 import websockets
 
-from tf_strategy.common.async_event import AsyncEvent, AsyncHandler
+from ..async_event import AsyncHandler
 
 logger = logging.getLogger(__name__)
 
@@ -14,18 +14,17 @@ class AsyncWSListener:
     def __init__(
         self,
         url: str,
-        msg_preprocessing: AsyncHandler | None = None,
+        msg_handler: AsyncHandler,
         reconnect_delay: float = 5.0,
     ):
         self.url = url
-        self.msg_preprocessing = msg_preprocessing
+        self.msg_handler = msg_handler
         self.reconnect_delay = reconnect_delay
         self._task: asyncio.Task | None = None
         self._send_task: asyncio.Task | None = None
         self._stopped = False
         self._ws: websockets.WebSocketClientProtocol | None = None
         self._send_queue: asyncio.Queue[str | None] = asyncio.Queue()
-        self._eventer = AsyncEvent()
 
     async def _listen(self):
         while not self._stopped:
@@ -36,9 +35,7 @@ class AsyncWSListener:
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
                     async for msg in ws:
-                        if self.msg_preprocessing:
-                            msg = await self.msg_preprocessing(msg)
-                        await self._eventer.emit(msg)
+                        await self.msg_handler(msg)
             except (websockets.ConnectionClosed, OSError) as e:
                 self._ws = None
 
@@ -88,26 +85,3 @@ class AsyncWSListener:
         if msg is None:
             return
         await self._send_queue.put(msg)
-
-    async def add_handler(self, key: str, handler: AsyncHandler):
-        """Add hendler to this listener.
-
-        Args:
-            key (str): Unique identifier for the handler
-            handler (AsyncHandler): Asynchronous callable object for hotifications:
-                Example:
-                    async def my_handler(some_arg1, some_arg2, *args, **kwargs):...
-        """
-        await self._eventer.add(key, handler)
-
-    async def remove_handler(self, key: str):
-        """Remove handler from this listener.
-
-        Args:
-            key (str):  Unique identifier for the handler
-        """
-        await self._eventer.remove(key)
-
-    def is_empty(self) -> bool:
-        """If there is at least one handler for this listener, returns True"""
-        return self._eventer.is_empty()

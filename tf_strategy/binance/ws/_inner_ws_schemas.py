@@ -2,7 +2,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 from tf_strategy.common.async_event import AsyncHandler
-from tf_strategy.connector.common.enums import TimeInterval
+from tf_strategy.common.enums import TimeInterval
 
 from ..schemas import Symbol
 

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from tf_strategy.connector.common.schemas import Kline as CommonKline
-from tf_strategy.connector.common.schemas import Symbol as CommonSymbol
+from tf_strategy.common.schemas import Kline as CommonKline
+from tf_strategy.common.schemas import Symbol as CommonSymbol
 
 
 class Symbol(CommonSymbol):
