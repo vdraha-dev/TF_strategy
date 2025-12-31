@@ -3,6 +3,7 @@ import asyncio
 import httpx
 
 from tf_strategy.common.connection.ws_listener import AsyncHandler, AsyncWSListener
+from tf_strategy.common.tools import remove_event
 
 
 class PrivateWSListener(AsyncWSListener):
@@ -14,7 +15,6 @@ class PrivateWSListener(AsyncWSListener):
         reconnect_delay: float = 5.0,
     ):
         super().__init__(url, msg_handler, reconnect_delay)
-        self._p_url = url
         self._api_key = api_key
         self._listen_key: str | None = None
         self._keepalive_task: asyncio.Task | None = None
@@ -23,19 +23,28 @@ class PrivateWSListener(AsyncWSListener):
             base_url="https://api.binance.com/api/v3/userDataStream"
         )
 
+    @property
+    def url(self):
+        return self._url.rstrip("/") + "/" + self._listen_key
+
     async def start(self):
-        if self._stopped:
-            self._listen_key = await self._create_listen_key()
-            self._url = self._p_url.rstrip("/") + "/" + self._listen_key
+        if not self.is_started:
+
+            # blocking repeated starts
+            async with remove_event(self._stop_event):
+                # when we are in this block others see self.is_started = True
+                # create listener key for create private connection
+                self._listen_key = await self._create_listen_key()
 
             await super().start()
+
+            # create task for updating the listen key every 30 min
             self._keepalive_task = asyncio.create_task(self._keepalive_listen_key())
 
     async def stop(self):
-        if not self._stopped:
+        if self.is_started:
             await super().stop()
             if self._keepalive_task:
-                self._keepalive_task.cancel()
                 await asyncio.gather(self._keepalive_task, return_exceptions=True)
 
     async def _create_listen_key(self) -> str:
@@ -47,12 +56,22 @@ class PrivateWSListener(AsyncWSListener):
         return data["listenKey"]
 
     async def _keepalive_listen_key(self):
-        while not self._stopped:
-            await asyncio.sleep(30 * 60)
+        interval = 30 * 60
+
+        while self.is_started:
             try:
-                response: httpx.Response = await self._session.put(
+                # wait for timeout or set()
+                await asyncio.wait_for(self._stop_event.wait(), timeout=interval)
+                break  # stop_event was set
+            except TimeoutError:
+                pass  # Timeout - time to update the listen key
+
+            try:
+                response = await self._session.put(
+                    "",
                     headers={"X-MBX-APIKEY": self._api_key},
+                    timeout=10.0,
                 )
                 response.raise_for_status()
-            except httpx.TimeoutException:
-                await asyncio.sleep(self.reconnect_delay)
+            except httpx.HTTPError as e:
+                print(f"Keepalive failed: {e}")
