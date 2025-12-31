@@ -31,17 +31,30 @@ class AsyncWSListener:
         self._start_event = asyncio.Event()
         self._stop_event = asyncio.Event()
 
+        self._stop_event.set()
+
     @property
     def url(self):
-        """URL for connection"""
+        """URL for connection."""
         return self._url
 
+    @property
+    def is_started(self):
+        """Return True if the listener is started."""
+        return not self._stop_event.is_set()
+
+    @property
+    def is_connected(self):
+        """Return True if connection is open."""
+        return self._start_event.is_set()
+
     async def _listen(self):
-        while not self._stop_event.is_set():
+        while self.is_started:
+            need_reconnect = False
             try:
                 async with websockets.connect(self.url) as ws:
                     self._ws = ws
-                    self._start_event.set()  # signal about correct connection
+                    self._start_event.set()  # signal about created connection
 
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
@@ -50,33 +63,33 @@ class AsyncWSListener:
                         await self.msg_handler(msg)
 
             except (websockets.ConnectionClosed, OSError) as e:
-                self._ws = None
-                self._start_event.clear()
-
-                if self._stop_event.is_set():
-                    # if stop_event is set, then dont reconnect
-                    break
+                need_reconnect = True
 
                 logger.error(
                     f"[{self.url}] Connection lost: {e}. "
                     f"Reconnecting in {self.reconnect_delay}s..."
                 )
-                await asyncio.sleep(self.reconnect_delay)
             finally:
+                self._ws = None
+                self._start_event.clear()
+
                 # Stopped send loop when connection is broken
                 if self._send_task and not self._send_task.done():
                     await self._close_send_loop()
 
+            if need_reconnect:
+                await asyncio.sleep(self.reconnect_delay)
+
     async def _send_loop(self):
         """Loop for sending messages from queue."""
-        while self._ws is not None and not self._stop_event.is_set():
+        while self._ws is not None and self.is_started:
             try:
                 msg = await self._send_queue.get()
 
                 if msg is None:  # signal for closing
                     return
 
-                if self._ws:
+                if self._ws and self.is_connected:
                     try:
                         await self._ws.send(msg)
                     except Exception as e:
@@ -97,7 +110,7 @@ class AsyncWSListener:
 
     async def start(self):
         """Starts the listener for ws connection."""
-        if self._stop_event:
+        if not self.is_started:
             self._start_event.clear()
             self._stop_event.clear()
 
@@ -115,8 +128,9 @@ class AsyncWSListener:
 
     async def stop(self):
         """Stops the listener for ws connection."""
-        if not self._stop_event.is_set():
+        if self.is_started:
             self._stop_event.set()
+            self._start_event.clear()
 
             # closes ws connection
             if self._ws:
@@ -130,5 +144,5 @@ class AsyncWSListener:
 
     async def send(self, msg: str):
         """Adds a message to the queue for sending."""
-        if msg is not None and not self._stop_event.is_set():
+        if msg is not None and self.is_started:
             await self._send_queue.put(msg)
