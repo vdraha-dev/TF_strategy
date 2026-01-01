@@ -44,8 +44,16 @@ def load_public_key_from_pep(path: str) -> PublicKeyTypes:
         return serialization.load_pem_public_key(f.read())
 
 
-def sign_msg(private_key: PrivateKeyTypes, payload: dict):
-    """Format, encode and sign the payload msg using private_key."""
+def sign_payload(private_key: PrivateKeyTypes, payload: dict) -> str:
+    """Create signature for payload."""
     return base64.b64encode(
         private_key.sign(urlencode(payload).encode("utf-8"))
     ).decode()
+
+
+def get_signed_payload(
+    private_key: PrivateKeyTypes, payload: dict, key: str = "signature"
+) -> str:
+    """Return the received `payload` with a signature; 
+    The signature will be located behind the `key`."""
+    return {**payload, key: sign_payload(private_key, payload)}
