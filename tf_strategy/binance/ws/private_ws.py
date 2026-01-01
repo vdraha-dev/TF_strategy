@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 
 from tf_strategy.common.async_event import AsyncEvent, AsyncHandler
 from tf_strategy.common.connection.ws_listener import AsyncWSListener
-from tf_strategy.common.tools import sign_msg
+from tf_strategy.common.tools import get_signed_payload
 
 logger = logging.getLogger(__name__)
 
@@ -119,15 +119,18 @@ class BinancePrivateWS:
         await self._orders_eventer.remove(handler_token)
 
     async def _subscribe(self):
-        timestamp = int(time.time() * 1000)
-
-        payload = {'apiKey': self._api_key, 'timestamp': timestamp}
-
-        payload['signature'] = sign_msg(self._private_key, payload)
-
-        auth_msg = {'id': '1', 'method': 'session.logon', 'params': payload}
-
-        await self._listener.send(orjson.dumps(auth_msg).decode())
+        await self._listener.send(
+            orjson.dumps(
+                {
+                    'id': '1',
+                    'method': 'session.logon',
+                    'params': get_signed_payload(
+                        self._private_key,
+                        {'apiKey': self._api_key, 'timestamp': int(time.time() * 1000)},
+                    ),
+                }
+            ).decode()
+        )
 
     async def _msg_preprocessing(self, msg: str):
         print(msg)
