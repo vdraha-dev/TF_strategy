@@ -18,6 +18,11 @@ loggers:
     handlers: [console]
     propagate: False
 
+  __main__:
+    level: DEBUG
+    handlers: [console]
+    propagate: False
+
 root:
   level: WARNING
   handlers: []
