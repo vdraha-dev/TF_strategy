@@ -17,3 +17,44 @@ class TimeInterval(StrEnum):
     _1d = "1d"
     _2d = "3d"
     _1M = "1M"
+
+
+class Side(StrEnum):
+    Buy = "BUY"
+    Sell = "SELL"
+
+
+class Type(StrEnum):
+    Limit = "LIMIT"
+    Market = "MARKET"
+    StopLoss = "STOP_LOSS"
+    StopLossLimit = "STOP_LOSS_LIMIT"
+    TakeProfit = "TAKE_PROFIT"
+    TakeProfitLimit = "TAKE_PROFIT_LIMIT"
+    LimitMaker = "LIMIT_MAKER"
+
+    @property
+    def requires_price(self) -> bool:
+        return self in {
+            Type.Limit,
+            Type.StopLossLimit,
+            Type.TakeProfitLimit,
+            Type.LimitMaker,
+        }
+
+
+class TimeInForce(StrEnum):
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"
+
+
+class Status(StrEnum):
+    New = "NEW"
+    PendingNew = "PENDING_NEW"
+    PartiallyFilled = "PARTIALLY_FILLED"
+    Filled = "FILLED"
+    Canceled = "CANCELED"
+    PendingCancel = "PENDING_CANCEL"
+    Rejected = "REJECTED"
+    EXPIRED = "EXPIRED"
