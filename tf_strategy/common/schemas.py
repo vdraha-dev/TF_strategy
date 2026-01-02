@@ -135,7 +135,7 @@ class PartialyFill(BaseModel):
     qty: Decimal
     commission: Decimal = Field(default_factory=Decimal)
     commission_asset: str | None = None
-    
+
     model_config = {
         "populate_by_name": True,
     }
