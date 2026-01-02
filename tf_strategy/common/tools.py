@@ -56,4 +56,6 @@ def get_signed_payload(
 ) -> str:
     """Return the received `payload` with a signature;
     The signature will be located behind the `key`."""
-    return {**payload, key: sign_payload(private_key, payload)}
+
+    _payload = {str(_key): str(_value) for _key, _value in payload.items()}
+    return {**_payload, key: sign_payload(private_key, _payload)}
