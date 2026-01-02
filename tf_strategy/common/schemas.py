@@ -3,6 +3,7 @@ from typing import get_args
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     PrivateAttr,
     computed_field,
@@ -61,6 +62,8 @@ class Kline(BaseModel):
     number_of_trades: int
     taker_buy_base_volume: Decimal  # Taker buy base asset volume
     taker_buy_quote_volume: Decimal  # Taker buy quote asset volume
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BalanceForAsset(BaseModel):
@@ -136,9 +139,7 @@ class PartialyFill(BaseModel):
     commission: Decimal = Field(default_factory=Decimal)
     commission_asset: str | None = None
 
-    model_config = {
-        "populate_by_name": True,
-    }
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class OrderReport(BaseModel):
@@ -160,6 +161,4 @@ class OrderReport(BaseModel):
     #
     fills: list[PartialyFill] | None = None
 
-    model_config = {
-        "populate_by_name": True,
-    }
+    model_config = ConfigDict(populate_by_name=True)

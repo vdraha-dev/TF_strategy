@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import ClassVar
 
 from pydantic import Field
 
@@ -29,37 +30,36 @@ class Symbol(CommonSymbol):
 class Kline(CommonKline):
     """Binance Kline"""
 
-    @classmethod
-    def from_list(cls, raw: list) -> Kline:
-        return cls(
-            open_time=raw[0],
-            open_price=Decimal(raw[1]),
-            high_price=Decimal(raw[2]),
-            low_price=Decimal(raw[3]),
-            close_price=Decimal(raw[4]),
-            volume=Decimal(raw[5]),
-            close_time=raw[6],
-            quote_asset_volume=Decimal(raw[7]),
-            number_of_trades=int(raw[8]),
-            taker_buy_base_volume=Decimal(raw[9]),
-            taker_buy_quote_volume=Decimal(raw[10]),
-        )
+    open_time: int = Field(alias="t")
+    open_price: Decimal = Field(alias="o")
+    high_price: Decimal = Field(alias="h")
+    low_price: Decimal = Field(alias="l")
+    close_price: Decimal = Field(alias="c")
+    volume: Decimal = Field(alias="v")
+    close_time: int = Field(alias="T")
+    quote_asset_volume: Decimal = Field(alias="q")
+    number_of_trades: int = Field(alias="n")
+    taker_buy_base_volume: Decimal = Field(alias="V")
+    taker_buy_quote_volume: Decimal = Field(alias="Q")
+
+    _kline_fields: ClassVar[tuple[str, ...]] = (
+        "t",  # open time
+        "o",  # open
+        "h",  # high
+        "l",  # low
+        "c",  # close
+        "v",  # volume
+        "T",  # close time
+        "q",  # quote asset volume
+        "n",  # number of trades
+        "V",  # taker buy base
+        "Q",  # taker buy quote
+    )
 
     @classmethod
-    def from_dict(cls, raw: dict) -> Kline:
-        return cls(
-            open_time=raw["t"],
-            open_price=Decimal(raw["o"]),
-            high_price=Decimal(raw["h"]),
-            low_price=Decimal(raw["l"]),
-            close_price=Decimal(raw["c"]),
-            volume=Decimal(raw["v"]),
-            close_time=raw["T"],
-            quote_asset_volume=Decimal(raw["q"]),
-            number_of_trades=int(raw["n"]),
-            taker_buy_base_volume=Decimal(raw["V"]),
-            taker_buy_quote_volume=Decimal(raw["Q"]),
-        )
+    def from_list(cls, raw: list) -> Kline:
+        data = dict(zip(cls._kline_fields, raw, strict=True))
+        return cls.model_validate(data)
 
 
 class Order(CommonOrder):
