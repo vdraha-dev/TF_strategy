@@ -1,9 +1,10 @@
 from decimal import Decimal
 from typing import ClassVar
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 
 from tf_strategy.common.enums import TimeInForce
+from tf_strategy.common.schemas import BalanceForAsset
 from tf_strategy.common.schemas import (
     Kline as CommonKline,
 )
@@ -18,6 +19,9 @@ from tf_strategy.common.schemas import (
 )
 from tf_strategy.common.schemas import (
     Symbol as CommonSymbol,
+)
+from tf_strategy.common.schemas import (
+    Wallet as CommonWallet,
 )
 
 
@@ -60,6 +64,20 @@ class Kline(CommonKline):
     def from_list(cls, raw: list) -> Kline:
         data = dict(zip(cls._kline_fields, raw, strict=True))
         return cls.model_validate(data)
+
+
+class Wallet(CommonWallet):
+    balance: dict[str, BalanceForAsset]
+
+    @model_validator(mode="before")
+    @classmethod
+    def build_balance_map(cls, data):
+        """
+        Convert Binance balances list into a dict keyed by asset symbol.
+        """
+        if isinstance(data["balance"], list):
+            data["balance"] = {item["asset"]: item for item in data["balance"]}
+        return data
 
 
 class Order(CommonOrder):

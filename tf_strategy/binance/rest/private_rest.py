@@ -1,14 +1,12 @@
 import logging
 import time
+from collections.abc import Generator
 
 import httpx
 import orjson
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 
-from tf_strategy.binance.schemas import Order, OrderReport
-
-# from tf_strategy.binance.schemas import Symbol
-from tf_strategy.common.schemas import BalanceForAsset, Wallet
+from tf_strategy.binance.schemas import Order, OrderReport, Symbol, Wallet
 from tf_strategy.common.tools import get_signed_payload
 
 from .rest_paths import rest_path
@@ -27,7 +25,7 @@ class BinancePrivateREST:
 
         self._private_key = private_key
 
-    async def account_info(self) -> dict:
+    async def account_info(self) -> dict | None:
         """
         Get current account information.
 
@@ -70,18 +68,22 @@ class BinancePrivateREST:
                 "uid": 354937868
             }
         """
-        res = await self._http_client.get(
-            url=rest_path.private.account,
-            params=get_signed_payload(
-                self._private_key,
-                {
-                    "omitZeroBalances": "true",  # only non-zero balances
-                    "timestamp": int(time.time() * 1000),
-                },
-            ),
-        )
+        try:
+            res = await self._http_client.get(
+                url=rest_path.private.account,
+                params=get_signed_payload(
+                    self._private_key,
+                    {
+                        "omitZeroBalances": "true",  # only non-zero balances
+                        "timestamp": int(time.time() * 1000),
+                    },
+                ),
+            )
 
-        res.raise_for_status()
+            res.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to retrieve account information: {str(e)}")
+            return None
 
         return orjson.loads(res.content)
 
@@ -96,16 +98,9 @@ class BinancePrivateREST:
         Returns:
             Wallet: A wallet object containing balances for all non-zero assets.
         """
-        account_info = await self.account_info()
+        account_info = (await self.account_info()) or {}
 
-        return Wallet(
-            balance={
-                i["asset"]: BalanceForAsset(
-                    asset=i["asset"], free=i["free"], locked=i["locked"]
-                )
-                for i in account_info["balances"]
-            }
-        )
+        return Wallet(balance=account_info.get("balances", []))
 
     async def send_order(self, order: Order) -> OrderReport | None:
         """
@@ -145,6 +140,29 @@ class BinancePrivateREST:
         raw = orjson.loads(resp.content)
         report = OrderReport.model_validate(raw)
         return report
+
+    async def get_open_orders(
+        self, symbol: Symbol | None = None
+    ) -> Generator[None, None, OrderReport]:
+        """If the symbol is not sent, orders for all symbols will be returned in an array."""
+        payload = {}
+        if symbol:
+            payload['symbol'] = symbol.symbol
+
+        try:
+            res = await self._http_client.get(
+                url=rest_path.private.open_orders,
+                params=get_signed_payload(
+                    self._private_key, {**payload, "timestamp": int(time.time() * 1000)}
+                ),
+            )
+
+            res.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to get open orders: {str(e)}")
+            return None
+
+        return (OrderReport.model_validate(i) for i in orjson.loads(res.content))
 
     # async def cancel_order(self, order: CancelOrder) -> OrderReport:
     #     ...
