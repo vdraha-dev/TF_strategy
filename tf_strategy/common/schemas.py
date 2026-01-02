@@ -116,21 +116,33 @@ class Order(BaseModel):
     def check_price(cls, values: Order):
         if values.type.requires_price and values.price is None:
             raise ValueError("A non-market order must contain a price")
-        
+
+        return values
+
+    @model_validator(mode="after")
+    def check_time_in_force(cls, values: Order):
+        if values.type != Type.Market and not values.time_in_force:
+            raise ValueError("A non-market order must contain time_in_force")
+
+        if values.type == Type.Market and values.time_in_force:
+            raise ValueError("In a market order field time_in_force must be None")
+
         return values
 
 
-class PartialyFills(BaseModel):
+class PartialyFill(BaseModel):
     price: Decimal
     qty: Decimal
     commission: Decimal = Field(default_factory=Decimal)
     commission_asset: str | None = None
-    trade_id: str | None = None
+    
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class OrderReport(BaseModel):
     symbol: str
-    order_id: str
     client_order_id: str
     transaction_time: int
 
@@ -146,4 +158,8 @@ class OrderReport(BaseModel):
     side: Side | None = None
 
     #
-    fills: list[PartialyFills] | None = None
+    fills: list[PartialyFill] | None = None
+
+    model_config = {
+        "populate_by_name": True,
+    }
