@@ -17,12 +17,12 @@ class BinancePrivateWS:
 
     def __init__(
         self,
-        base_url: str,
+        url: str,
         api_key: str,
         private_key: PrivateKeyTypes,
         reconnect_delay: float = 5,
     ):
-        self._base_url = base_url
+        self._url = url
         self._api_key: str = api_key
         self._private_key = private_key
         self._reconnect_delay = reconnect_delay
@@ -38,7 +38,7 @@ class BinancePrivateWS:
             self._is_started = True
             logger.info("Private Binance connection is starting ...")
             self._listener = AsyncWSListener(
-                url=self._base_url,
+                url=self._url,
                 msg_handler=self._msg_preprocessing,
                 reconnect_delay=self._reconnect_delay,
             )

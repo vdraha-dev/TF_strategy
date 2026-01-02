@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class BinancePublicWS:
     """Client for Binance public WebSocket subscriptions."""
 
-    def __init__(self, base_url: str, reconnect_delay: float = 5):
+    def __init__(self, url: str, reconnect_delay: float = 5):
         """
         Initialize the BinancePublicWS client.
 
@@ -28,7 +28,7 @@ class BinancePublicWS:
             base_url (str): Base URL for Binance WebSocket API.
         """
 
-        self._base_url = base_url
+        self._url = url
         self._reconnect_delay = reconnect_delay
 
         self._is_started = False
@@ -52,7 +52,7 @@ class BinancePublicWS:
             self._is_started = True
             logger.info("Public Binance connection is starting ...")
             self._listener = AsyncWSListener(
-                url=self._base_url,
+                url=self._url,
                 msg_handler=self._msg_preprocessing,
                 reconnect_delay=self._reconnect_delay,
             )
@@ -273,6 +273,6 @@ class BinancePublicWS:
         await self._subscriptions[subscr_key].emit(
             symbol=msg["s"],
             time_interval=msg["k"]["i"],
-            kline=Kline.from_dict(msg["k"]),
+            kline=Kline.model_validate(msg["k"]),
             is_closed=msg["k"]["x"],
         )

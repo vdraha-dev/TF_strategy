@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class BinancePublicREST:
-    def __init__(self, base_url: str):
-        self._http_pub_client = httpx.AsyncClient(base_url=base_url)
+    def __init__(self, url: str):
+        self._http_pub_client = httpx.AsyncClient(base_url=url)
 
     async def get_historical_candles(
         self,
@@ -104,7 +104,7 @@ class BinancePublicREST:
                 url=rest_path.public.klines, params=params
             )
             res.raise_for_status()
-            klines = [BinanceKline.from_list(i) for i in orjson.loads(res.content)]
+            klines = [BinanceKline.from_list(i[:-1]) for i in orjson.loads(res.content)]
 
         except httpx.HTTPStatusError as e:
             logger.error(
