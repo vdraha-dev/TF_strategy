@@ -20,6 +20,11 @@ class PrivateSubPath(BaseModel):
     def account(self) -> str:
         return f"/api/{self.version}/account"
 
+    @computed_field
+    @property
+    def order(self) -> str:
+        return f"/api/{self.version}/order"
+
 
 class Path(BaseModel):
     version: str = Field(default="v3")
