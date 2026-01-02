@@ -25,6 +25,11 @@ class PrivateSubPath(BaseModel):
     def order(self) -> str:
         return f"/api/{self.version}/order"
 
+    @computed_field
+    @property
+    def open_orders(self) -> str:
+        return f"/api/{self.version}/openOrders"
+
 
 class Path(BaseModel):
     version: str = Field(default="v3")
