@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import ClassVar
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 from tf_strategy.common.enums import TimeInForce
 from tf_strategy.common.schemas import (
@@ -106,7 +106,7 @@ class OrderReport(CommonOrderReport):
 
     order_id: int = Field(alias="orderId")
     client_order_id: str = Field(alias="clientOrderId")
-    transaction_time: int = Field(alias="transactTime")
+    transaction_time: int = Field(validation_alias=AliasChoices("transactTime", "time"))
 
     #
     orig_qty: Decimal | None = Field(default=None, alias="origQty")
