@@ -3,8 +3,8 @@ from typing import ClassVar
 
 from pydantic import AliasChoices, ConfigDict, Field, model_validator
 
-from tf_strategy.common.enums import TimeInForce
-from tf_strategy.common.schemas import BalanceForAsset
+from tf_strategy.common.enums import Side, Status, TimeInForce, Type
+from tf_strategy.common.schemas import BalanceForAsset as CommonBalanceForAsset
 from tf_strategy.common.schemas import CancelOrder as CommonCancelOrder
 from tf_strategy.common.schemas import Kline as CommonKline
 from tf_strategy.common.schemas import Order as CommonOrder
@@ -55,7 +55,17 @@ class Kline(CommonKline):
         return cls.model_validate(data)
 
 
+class BalanceForAsset(CommonBalanceForAsset):
+    """Binance BalanceForAsset"""
+
+    asset: str = Field(alias="a")
+    free: Decimal = Field(alias="f")
+    locked: Decimal = Field(alias="l")
+
+
 class Wallet(CommonWallet):
+    """Binance Wallet"""
+
     balance: dict[str, BalanceForAsset]
 
     @model_validator(mode="before")
@@ -111,21 +121,33 @@ class PartialyFill(CommonPartialyFill):
 class OrderReport(CommonOrderReport):
     """Binance OrderReport"""
 
-    order_id: str = Field(alias="orderId")
-    client_order_id: str = Field(alias="clientOrderId")
-    transaction_time: int = Field(validation_alias=AliasChoices("transactTime", "time"))
+    symbol: str = Field(alias="s")
+    order_id: str = Field(validation_alias=AliasChoices("orderId", "i"))
+    client_order_id: str = Field(validation_alias=AliasChoices("clientOrderId", "c"))
+    transaction_time: int = Field(
+        validation_alias=AliasChoices("transactTime", "time", "T")
+    )
 
     #
-    orig_qty: Decimal | None = Field(default=None, alias="origQty")
-    executed_qty: Decimal | None = Field(default=None, alias="executedQty")
+    price: Decimal | None = Field(alias="p")
+    orig_qty: Decimal | None = Field(
+        default=None, validation_alias=AliasChoices("origQty", "q")
+    )
+    executed_qty: Decimal | None = Field(
+        default=None, validation_alias=AliasChoices("executedQty", "z")
+    )
     orig_quote_order_qty: Decimal | None = Field(
-        default=None, alias="origQuoteOrderQty"
+        default=None, validation_alias=AliasChoices("origQuoteOrderQty", "Q")
     )
     cummulative_quote_qty: Decimal | None = Field(
-        default=None, alias="cummulativeQuoteQty"
+        default=None, validation_alias=AliasChoices("cummulativeQuoteQty", "Z")
     )
-    time_in_force: TimeInForce | None = Field(default=None, alias="timeInForce")
-
+    status: Status | None = Field(default=None, alias="X")
+    time_in_force: TimeInForce | None = Field(
+        default=None, validation_alias=AliasChoices("timeInForce", "f")
+    )
+    type: Type | None = Field(default=None, alias="o")
+    side: Side | None = Field(default=None, alias="S")
     model_config = ConfigDict(coerce_numbers_to_str=True)
 
 
