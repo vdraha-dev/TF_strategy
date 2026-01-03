@@ -6,7 +6,7 @@ import httpx
 import orjson
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 
-from tf_strategy.binance.schemas import Order, OrderReport, Symbol, Wallet
+from tf_strategy.binance.schemas import CancelOrder, Order, OrderReport, Symbol, Wallet
 from tf_strategy.common.tools import get_signed_payload
 
 from .rest_paths import rest_path
@@ -164,5 +164,40 @@ class BinancePrivateREST:
 
         return (OrderReport.model_validate(i) for i in orjson.loads(res.content))
 
-    # async def cancel_order(self, order: CancelOrder) -> OrderReport:
-    #     ...
+    async def cancel_order(self, order: CancelOrder) -> OrderReport | None:
+        """
+        Cancel an existing order on the exchange.
+        
+        This method signs and sends an order request to the private REST API.
+        If the request is successful, the response is validated and converted
+        into an `OrderReport` model. In case of an HTTP error, the error is
+        logged and `None` is returned.
+
+        Args:
+            order (CancelOrder):
+                The order object containing all required order parameters.
+
+        Returns:
+            (OrderReport | None):
+                The validated order report if the request succeeds,
+                otherwise `None` if an error occurs.
+        """
+        try:
+            res = await self._http_client.delete(
+                url=rest_path.private.order,
+                params=get_signed_payload(
+                    self._private_key,
+                    {
+                        **CancelOrder.create_cancel_payload(order),
+                        "timestamp": int(time.time() * 1000),
+                    },
+                ),
+            )
+
+            res.raise_for_status()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to cancel order: {str(e)}")
+            return None
+
+        return OrderReport.model_validate(orjson.loads(res.content))
