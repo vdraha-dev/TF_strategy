@@ -1,28 +1,17 @@
 from decimal import Decimal
 from typing import ClassVar
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, ConfigDict, Field, model_validator
 
 from tf_strategy.common.enums import TimeInForce
 from tf_strategy.common.schemas import BalanceForAsset
-from tf_strategy.common.schemas import (
-    Kline as CommonKline,
-)
-from tf_strategy.common.schemas import (
-    Order as CommonOrder,
-)
-from tf_strategy.common.schemas import (
-    OrderReport as CommonOrderReport,
-)
-from tf_strategy.common.schemas import (
-    PartialyFill as CommonPartialyFill,
-)
-from tf_strategy.common.schemas import (
-    Symbol as CommonSymbol,
-)
-from tf_strategy.common.schemas import (
-    Wallet as CommonWallet,
-)
+from tf_strategy.common.schemas import CancelOrder as CommonCancelOrder
+from tf_strategy.common.schemas import Kline as CommonKline
+from tf_strategy.common.schemas import Order as CommonOrder
+from tf_strategy.common.schemas import OrderReport as CommonOrderReport
+from tf_strategy.common.schemas import PartialyFill as CommonPartialyFill
+from tf_strategy.common.schemas import Symbol as CommonSymbol
+from tf_strategy.common.schemas import Wallet as CommonWallet
 
 
 class Symbol(CommonSymbol):
@@ -122,7 +111,7 @@ class PartialyFill(CommonPartialyFill):
 class OrderReport(CommonOrderReport):
     """Binance OrderReport"""
 
-    order_id: int = Field(alias="orderId")
+    order_id: str = Field(alias="orderId")
     client_order_id: str = Field(alias="clientOrderId")
     transaction_time: int = Field(validation_alias=AliasChoices("transactTime", "time"))
 
@@ -137,4 +126,23 @@ class OrderReport(CommonOrderReport):
     )
     time_in_force: TimeInForce | None = Field(default=None, alias="timeInForce")
 
-    fills: list[PartialyFill] | None = Field(default=None, alias="fills")
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
+
+class CancelOrder(CommonCancelOrder):
+    """Binance CancelOrder"""
+
+    @classmethod
+    def create_cancel_payload(self, order: CommonCancelOrder) -> dict:
+        payload = {"symbol": order.symbol.symbol}
+
+        if order.order_id:
+            payload["orderId"] = order.order_id
+
+        if order.client_order_id:
+            payload["origClientOrderId"] = order.client_order_id
+
+        if order.new_client_order_id:
+            payload["newClientOrderId"] = order.new_client_order_id
+
+        return payload

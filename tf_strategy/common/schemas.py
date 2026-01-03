@@ -144,6 +144,7 @@ class PartialyFill(BaseModel):
 
 class OrderReport(BaseModel):
     symbol: str
+    order_id: str
     client_order_id: str
     transaction_time: int
 
@@ -162,3 +163,20 @@ class OrderReport(BaseModel):
     fills: list[PartialyFill] | None = None
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class CancelOrder(BaseModel):
+    symbol: Symbol
+    order_id: str | None = None
+    client_order_id: str | None = None
+
+    # need if Exchange allow create custom
+    # id for cancel order
+    new_client_order_id: str | None = None
+
+    @model_validator(mode="before")
+    def order_id_check(cls, data: dict):
+        if data["order_id"] is None and data["client_order_id"] is None:
+            raise ValueError("Either orderI_id or client_order_id must be set")
+
+        return data
