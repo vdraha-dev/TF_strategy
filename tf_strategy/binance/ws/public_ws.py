@@ -53,7 +53,7 @@ class BinancePublicWS:
             logger.info("Public Binance connection is starting ...")
             self._listener = AsyncWSListener(
                 url=self._url,
-                msg_handler=self._msg_preprocessing,
+                on_message=self._msg_preprocessing,
                 reconnect_delay=self._reconnect_delay,
             )
             await self._listener.start()

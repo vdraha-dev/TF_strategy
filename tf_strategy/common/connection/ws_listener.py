@@ -15,12 +15,18 @@ class AsyncWSListener:
     def __init__(
         self,
         url: str,
-        msg_handler: AsyncHandler,
+        on_message: AsyncHandler,
+        on_connected: AsyncHandler | None = None,
+        on_error: AsyncHandler | None = None,
+        on_close: AsyncHandler | None = None,
         reconnect_delay: float = 5.0,
     ):
         self._url = url
-        self.msg_handler = msg_handler
-        self.reconnect_delay = reconnect_delay
+        self._on_message_handler = on_message
+        self._on_connected_handler = on_connected
+        self._on_error_handler = on_error
+        self._on_close_handler = on_close
+        self._reconnect_delay = reconnect_delay
 
         self._task: asyncio.Task | None = None
         self._send_task: asyncio.Task | None = None
@@ -48,28 +54,55 @@ class AsyncWSListener:
         """Return True if connection is open."""
         return self._start_event.is_set()
 
+    async def _on_message(self, *args, **kwargs):
+        if self._on_message_handler:
+            await self._on_message_handler(*args, **kwargs)
+
+    async def _on_connected(self, *args, **kwargs):
+        if self._on_connected_handler:
+            await self._on_connected_handler(*args, **kwargs)
+
+    async def _on_error(self, *args, **kwargs):
+        if self._on_error_handler:
+            await self._on_error_handler(*args, **kwargs)
+
+    async def _on_close(self, *args, **kwargs):
+        if self._on_close_handler:
+            await self._on_close_handler(*args, **kwargs)
+
     async def _listen(self):
         while self.is_started:
             need_reconnect = False
             try:
-                async with websockets.connect(self.url) as ws:
+                async with websockets.connect(
+                    self.url, open_timeout=self._reconnect_delay
+                ) as ws:
                     self._ws = ws
+                    await self._on_connected()
+
                     self._start_event.set()  # signal about created connection
 
                     # We launch a separate task for sending messages.
                     self._send_task = asyncio.create_task(self._send_loop())
-
                     async for msg in ws:
-                        await self.msg_handler(msg)
+                        await self._on_message_handler(msg)
 
             except (websockets.ConnectionClosed, OSError) as e:
-                need_reconnect = True
+                await self._on_error(error=e)
 
                 logger.error(
                     f"[{self.url}] Connection lost: {e}. "
-                    f"Reconnecting in {self.reconnect_delay}s..."
+                    f"Reconnecting in {self._reconnect_delay}s..."
                 )
+
+                need_reconnect = True
+
             finally:
+                if self._start_event.is_set():
+                    # send the on_close event only if
+                    # was send the on_connected event
+                    await self._on_close()
+
                 self._ws = None
                 self._start_event.clear()
 
@@ -77,8 +110,10 @@ class AsyncWSListener:
                 if self._send_task and not self._send_task.done():
                     await self._close_send_loop()
 
+            # wait reconnect_delay seconds before try to reconnect
+            # not blocking the finally block
             if need_reconnect:
-                await asyncio.sleep(self.reconnect_delay)
+                await asyncio.sleep(self._reconnect_delay)
 
     async def _send_loop(self):
         """Loop for sending messages from queue."""
@@ -118,7 +153,13 @@ class AsyncWSListener:
 
             # wait for successful connection
             try:
-                await asyncio.wait_for(self._start_event.wait(), timeout=10.0)
+                await asyncio.wait_for(
+                    self._start_event.wait(),
+                    # wait 3 reconnections
+                    # 1 reconnect_delay for create connection
+                    # + 1 reconnect_dellay waiting before try reconnection
+                    timeout=self._reconnect_delay * 6,
+                )
             except TimeoutError as e:
                 # stops if connection broken
                 await self.stop()

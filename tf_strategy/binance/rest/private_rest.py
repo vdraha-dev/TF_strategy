@@ -167,7 +167,7 @@ class BinancePrivateREST:
     async def cancel_order(self, order: CancelOrder) -> OrderReport | None:
         """
         Cancel an existing order on the exchange.
-        
+
         This method signs and sends an order request to the private REST API.
         If the request is successful, the response is validated and converted
         into an `OrderReport` model. In case of an HTTP error, the error is
