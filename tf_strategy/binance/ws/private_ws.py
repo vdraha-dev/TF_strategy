@@ -5,6 +5,7 @@ from uuid import uuid4
 import orjson
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 
+from tf_strategy.binance.schemas import BalanceForAsset, OrderReport
 from tf_strategy.common.async_event import AsyncEvent, AsyncHandler
 from tf_strategy.common.connection.ws_listener import AsyncWSListener
 from tf_strategy.common.tools import get_signed_payload
@@ -39,15 +40,15 @@ class BinancePrivateWS:
             logger.info("Private Binance connection is starting ...")
             self._listener = AsyncWSListener(
                 url=self._url,
-                msg_handler=self._msg_preprocessing,
+                on_message=self._msg_preprocessing,
                 reconnect_delay=self._reconnect_delay,
+                on_connected=self._on_connected,
             )
 
             self._wallet_eventer = AsyncEvent()
             self._orders_eventer = AsyncEvent()
 
             await self._listener.start()
-            await self._subscribe()
 
     async def stop(self):
         if self._is_started:
@@ -118,11 +119,14 @@ class BinancePrivateWS:
         """
         await self._orders_eventer.remove(handler_token)
 
-    async def _subscribe(self):
+    async def _on_connected(self):
+        await self._log_on_subscription()
+
+    async def _log_on_subscription(self):
         await self._listener.send(
             orjson.dumps(
                 {
-                    'id': '1',
+                    'id': 'logon_id',
                     'method': 'session.logon',
                     'params': get_signed_payload(
                         self._private_key,
@@ -132,5 +136,56 @@ class BinancePrivateWS:
             ).decode()
         )
 
+    async def _user_data_subscription(self):
+        await self._listener.send(
+            orjson.dumps(
+                {'id': 'user_data_id', 'method': 'userDataStream.subscribe'}
+            ).decode()
+        )
+
     async def _msg_preprocessing(self, msg: str):
-        print(msg)
+        msg: dict = orjson.loads(msg)
+
+        if event := msg.get("event"):
+            match event["e"]:
+                case "executionReport":
+                    await self._orders_eventer.emit(
+                        order_report=OrderReport.model_validate(event)
+                    )
+
+                case "outboundAccountPosition":
+                    await self._wallet_eventer.emit(
+                        balances_for_asset=[
+                            BalanceForAsset.model_validate(i) for i in event["B"]
+                        ]
+                    )
+
+        # processing subscription msgs
+        if id := msg.get("id"):
+            match id:
+
+                # processing logon subscription msgs
+                case "logon_id":
+                    if msg["status"] == 200:
+                        await self._user_data_subscription()
+                    else:
+                        logger.error(
+                            "Failed to send auth message." "Try again..."
+                            if self._listener.is_connected
+                            else "WS connection not established." f": {msg}"
+                        )
+
+                        if self._listener.is_connected:
+                            await self._log_on_subscription()
+
+                # processing user_datas' subscription msgs
+                case "user_data_id":
+                    if msg["status"] != 200:
+                        logger.error(
+                            "Failed to subscribe on UserData." "Try again..."
+                            if self._listener.is_connected
+                            else "WS connection not established." f": {msg}"
+                        )
+
+                        if self._listener.is_connected:
+                            await self._user_data_subscription()
