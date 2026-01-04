@@ -1,6 +1,7 @@
 import asyncio
 import base64
-from contextlib import asynccontextmanager
+import time
+from contextlib import asynccontextmanager, contextmanager
 from urllib.parse import urlencode
 
 from cryptography.hazmat.primitives import serialization
@@ -59,3 +60,19 @@ def get_signed_payload(
 
     _payload = {str(_key): str(_value) for _key, _value in payload.items()}
     return {**_payload, key: sign_payload(private_key, _payload)}
+
+
+@contextmanager
+def measure(label: str):
+    """
+    Measure time using time.time()
+    
+    Args:
+        label (srt): used to denote a timestamp:
+            print(f"{label}: {timedelta}")
+    """
+    start = time.time()
+    try:
+        yield
+    finally:
+        print(f"{label}: {time.time() - start}")
