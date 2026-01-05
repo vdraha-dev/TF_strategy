@@ -66,7 +66,7 @@ def get_signed_payload(
 def measure(label: str):
     """
     Measure time using time.time()
-    
+
     Args:
         label (srt): used to denote a timestamp:
             print(f"{label}: {timedelta}")
