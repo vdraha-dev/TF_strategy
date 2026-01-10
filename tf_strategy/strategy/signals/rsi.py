@@ -52,7 +52,9 @@ def rsi_sma_numpy(close, period) -> RsiBatch:
     avg_gain = sma_numpy(gains, period)
     avg_loss = sma_numpy(losses, period)
 
-    rsi = 100 - (100 / (1 + avg_gain / avg_loss))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rsi = 100 - (100 / (1 + avg_gain / avg_loss))
+
     return RsiBatch(
         rsi=np.concatenate([[np.nan], rsi]),
         avg_gain=np.concatenate([[np.nan], avg_gain]),
@@ -120,4 +122,6 @@ def rsi_update(
             last_sma_value=last_loss,
             period=period,
         )
+    if loss == 0:
+        return RsiIncremental(rsi=100, gain=gain, loss=loss)
     return RsiIncremental(rsi=100 - (100 / (1 + gain / loss)), gain=gain, loss=loss)
