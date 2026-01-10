@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 
 from .base import BaseStrategy
+from .signals.ema import ema_scipy, ema_update
 from .signals.rsi import RsiBatch, RsiIncremental, rsi_sma_numpy, rsi_update
-from .signals.sma import sma_numpy, sma_update
 from .tools import crossed_above, crossed_below
 
 
@@ -115,18 +115,16 @@ class TrendFollowing(BaseStrategy):
         slow_period = self._params["slow_period"]
         rsi_period = self._params["rsi_period"]
 
-        fast_ma = sma_update(
+        fast_ma = ema_update(
             new_price=close[-1],
-            leave_price=close[-fast_period - 1],
-            last_sma_value=self._signals.fast_ma[-1],
-            period=fast_period,
+            last_ema_value=self._signals.fast_ma[-1],
+            alpha=2 / (fast_period + 1),
         )
 
-        slow_ma = sma_update(
+        slow_ma = ema_update(
             new_price=close[-1],
-            leave_price=close[-slow_period - 1],
-            last_sma_value=self._signals.slow_ma[-1],
-            period=slow_period,
+            last_ema_value=self._signals.slow_ma[-1],
+            alpha=2 / (slow_period + 1),
         )
 
         rsi = rsi_update(
@@ -169,9 +167,8 @@ class TrendFollowing(BaseStrategy):
         rsi_overbought: float,
         rsi_oversold: float,
     ) -> FullSignals:
-
-        fast_ma = sma_numpy(close, fast_period)
-        slow_ma = sma_numpy(close, slow_period)
+        fast_ma = ema_scipy(close, fast_period)
+        slow_ma = ema_scipy(close, slow_period)
         rsi = rsi_sma_numpy(close, rsi_period)
 
         entries = crossed_above(fast_ma, slow_ma) & (rsi.rsi < rsi_oversold)
@@ -194,7 +191,7 @@ class TrendFollowing(BaseStrategy):
         rsi_overbought: float,
         rsi_oversold: float,
     ) -> np.ndarray:
-
+        close = close.squeeze()
         signals = self._generate_signals(
             close, fast_period, slow_period, rsi_period, rsi_overbought, rsi_oversold
         )
