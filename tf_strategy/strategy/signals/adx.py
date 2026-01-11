@@ -1,17 +1,19 @@
-import numpy as np
-from scipy.signal import lfilter
 from typing import NamedTuple
 
-__all__=["adx, adx_update, ADXIncremental, ADXBatch"]
+import numpy as np
+from scipy.signal import lfilter
 
-class ADXIncremental(NamedTuple):
-    adx:float
-    trs:float
-    pdms:float
-    mdms:float
+__all__ = ["adx", "adx_update", "AdxIncremental", "AdxBatch"]
 
 
-class ADXBatch(NamedTuple):
+class AdxIncremental(NamedTuple):
+    adx: float
+    trs: float
+    pdms: float
+    mdms: float
+
+
+class AdxBatch(NamedTuple):
     adx: np.ndarray
     trs: np.ndarray
     pdms: np.ndarray
@@ -37,21 +39,17 @@ def __wilder_smoothing(data: np.ndarray, period: int):
     coef = (period - 1) / period
     result = np.full_like(data, np.nan)
 
-    result[period-1:], _ = lfilter(
-        b=[1. / period],
-        a=[1., -coef],
-        x=data[period-1:],
-        zi=[data[:period].mean() * coef]
+    result[period - 1 :], _ = lfilter(
+        b=[1.0 / period],
+        a=[1.0, -coef],
+        x=data[period - 1 :],
+        zi=[data[:period].mean() * coef],
     )
 
     return result
 
-def adx(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray, 
-    period:int
-) -> ADXBatch:
+
+def adx(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int) -> AdxBatch:
     """
     Calculate Average Directional Index (ADX).
 
@@ -85,12 +83,12 @@ def adx(
         np.maximum(
             np.abs(high[1:] - close[:-1]),
             np.abs(low[1:] - close[:-1]),
-        )
+        ),
     )
 
     # Directional movements
-    upmove  = np.zeros_like(high)
-    downmove  = np.zeros_like(high)
+    upmove = np.zeros_like(high)
+    downmove = np.zeros_like(high)
 
     upmove[1:] = high[1:] - high[:-1]
     downmove[1:] = low[:-1] - low[1:]
@@ -99,45 +97,33 @@ def adx(
     mdm = np.where((downmove > upmove) & (downmove > 0), downmove, 0)
 
     # Update smoothed TR
-    trs = __wilder_smoothing(tr,period)
+    trs = __wilder_smoothing(tr, period)
 
     # Update smoothed DM
     pdms = __wilder_smoothing(pdm, period)
     mdms = __wilder_smoothing(mdm, period)
 
     # Calculate DI
-    pdi = np.divide(
-        pdms, 
-        trs,
-        out=np.full_like(trs, np.nan),
-        where=trs != 0
-    ) * 100
-    mdi = np.divide(
-        mdms, 
-        trs,
-        out=np.full_like(trs, np.nan),
-        where=trs != 0
-    ) * 100
+    pdi = np.divide(pdms, trs, out=np.full_like(trs, np.nan), where=trs != 0) * 100
+    mdi = np.divide(mdms, trs, out=np.full_like(trs, np.nan), where=trs != 0) * 100
 
     # Calculate DX
     di_sum = pdi + mdi
-    dx = np.divide(
-        np.abs(pdi - mdi), 
-        di_sum,
-        out=np.full_like(di_sum, np.nan),
-        where=di_sum != 0
-    ) * 100
+    dx = (
+        np.divide(
+            np.abs(pdi - mdi),
+            di_sum,
+            out=np.full_like(di_sum, np.nan),
+            where=di_sum != 0,
+        )
+        * 100
+    )
 
     # Calculate ADX
     adx_values = np.full_like(dx, np.nan)
-    adx_values[2*period-1:] = __wilder_smoothing(dx[period-1:], period)[period:]
+    adx_values[2 * period - 1 :] = __wilder_smoothing(dx[period - 1 :], period)[period:]
 
-    return ADXBatch(
-        adx=adx_values,
-        trs=trs,
-        pdms=pdms,
-        mdms=mdms
-    )
+    return AdxBatch(adx=adx_values, trs=trs, pdms=pdms, mdms=mdms)
 
 
 def adx_update(
@@ -151,7 +137,7 @@ def adx_update(
     last_pdms: float,
     last_mdms: float,
     period: int,
-) -> ADXIncremental:
+) -> AdxIncremental:
     """
     Update ADX incrementally with new price bar.
 
@@ -184,11 +170,7 @@ def adx_update(
         NamedTuple with updated values: adx, trs, pdms, mdms
     """
     # True Range
-    tr = max(
-        high - low,
-        abs(high - prev_close),
-        abs(low - prev_close)
-    )
+    tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
 
     rperiod = 1 / period
 
@@ -201,22 +183,17 @@ def adx_update(
     # Directional movements
     upmove = high - prev_high
     downmove = prev_low - low
-    
+
     pdm = upmove if (upmove > downmove and upmove > 0) else 0
     mdm = downmove if (downmove > upmove and downmove > 0) else 0
 
     # Update smoothed DM
-    pdms = last_pdms * coef + pdm * rperiod 
+    pdms = last_pdms * coef + pdm * rperiod
     mdms = last_mdms * coef + mdm * rperiod
 
     # Calculate DI
     if trs == 0:
-        return ADXIncremental(
-            adx=np.nan,
-            trs=trs,
-            pdms=pdms,
-            mdms=mdms
-        )
+        return AdxIncremental(adx=np.nan, trs=trs, pdms=pdms, mdms=mdms)
 
     pdi = 100 * pdms / trs
     mdi = 100 * mdms / trs
@@ -224,13 +201,7 @@ def adx_update(
     # Calculate DX
     di_sum = pdi + mdi
     dx = 0 if di_sum == 0 else 100 * abs(pdi - mdi) / di_sum
-    
-    adx = last_adx * coef + dx * rperiod
-    
-    return ADXIncremental(
-        adx=adx,
-        trs=trs,
-        pdms=pdms,
-        mdms=mdms
-    )
 
+    adx = last_adx * coef + dx * rperiod
+
+    return AdxIncremental(adx=adx, trs=trs, pdms=pdms, mdms=mdms)
