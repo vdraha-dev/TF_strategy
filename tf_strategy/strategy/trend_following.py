@@ -78,7 +78,7 @@ class TrendFollowing(BaseStrategy):
         self._signals: TrendFollowing.LimitedSignals | None = None
 
     @property
-    def signals(self) -> deque[bool]:
+    def signals(self) -> deque[int]:
         return self._signals.signals
 
     def update_batch(self, data: pd.DataFrame):
