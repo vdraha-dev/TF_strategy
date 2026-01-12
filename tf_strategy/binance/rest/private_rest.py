@@ -144,7 +144,27 @@ class BinancePrivateREST:
     async def get_open_orders(
         self, symbol: Symbol | None = None
     ) -> Generator[None, None, OrderReport]:
-        """If the symbol is not sent, orders for all symbols will be returned in an array."""
+        """
+        Retrieve all open orders for the account.
+
+        This method signs and sends a request to the private REST API to fetch
+        all open orders. If a specific symbol is provided, only orders for that
+        symbol are returned. Otherwise, orders for all symbols are returned.
+
+        Args:
+            symbol (Symbol | None, optional):
+                The trading symbol to filter orders. If not provided, orders for
+                all symbols will be returned. Defaults to None.
+
+        Returns:
+            Generator[None, None, OrderReport]:
+                A generator that yields validated OrderReport objects for each
+                open order.
+
+        Raises:
+            HTTPStatusError: If the HTTP request fails, the error is logged and
+                           None is returned instead.
+        """
         payload = {}
         if symbol:
             payload['symbol'] = symbol.symbol
