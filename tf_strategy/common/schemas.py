@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import get_args
+from typing import Any, get_args
 
 from pydantic import (
     BaseModel,
@@ -12,6 +12,16 @@ from pydantic import (
 )
 
 from .enums import Side, Status, TimeInForce, Type
+
+
+class ConnectorConfig(BaseModel):
+    public_rest_url: str | None
+    private_rest_url: str | None
+    public_ws_url: str | None
+    private_ws_url: str | None
+
+    api_key: Any = None
+    private_key: Any = None
 
 
 class Symbol(BaseModel):
