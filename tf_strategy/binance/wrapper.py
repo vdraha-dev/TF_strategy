@@ -260,7 +260,7 @@ class BinanceWrapper:
         """
         open_orders = await self._private_rest.get_open_orders()
         if open_orders:
-            self._open_orders = open_orders
+            self._open_orders = {order.order_id: order for order in open_orders}
 
     #################
     ### Public WS ###
