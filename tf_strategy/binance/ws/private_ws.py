@@ -59,7 +59,7 @@ class BinancePrivateWS:
             self._wallet_eventer = None
             self._orders_eventer = None
 
-    async def wallet_subscribe(self, handler: AsyncHandler) -> bool:
+    async def wallet_subscribe(self, handler: AsyncHandler) -> str:
         """
         Subscribe to Wallet updates.
 
@@ -85,11 +85,10 @@ class BinancePrivateWS:
 
         Args:
             handler_token (str): Handler token for unsubscribing.
-
         """
         await self._orders_eventer.remove(handler_token)
 
-    async def orders_subscribe(self, handler: AsyncHandler) -> bool:
+    async def orders_subscribe(self, handler: AsyncHandler) -> str:
         """
         Subscribe to Orders updates.
 
@@ -115,7 +114,6 @@ class BinancePrivateWS:
 
         Args:
             handler_token (str): Handler token for unsubscribing.
-
         """
         await self._orders_eventer.remove(handler_token)
 

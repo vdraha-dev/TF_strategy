@@ -78,7 +78,7 @@ class TrendFollowing(BaseStrategy):
         self._signals: TrendFollowing.LimitedSignals | None = None
 
     @property
-    def signals(self) -> np.ndarray:
+    def signals(self) -> deque[bool]:
         return self._signals.signals
 
     def update_batch(self, data: pd.DataFrame):
@@ -244,7 +244,7 @@ class TrendFollowing(BaseStrategy):
         signals[entries] = 1
         signals[exits] = -1
 
-        return self.FullSignals( 
+        return self.FullSignals(
             signals=signals, fast_ma=fast_ma, slow_ma=slow_ma, rsi=rsi, adx=adx_
         )
 

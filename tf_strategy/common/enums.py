@@ -57,4 +57,4 @@ class Status(StrEnum):
     Canceled = "CANCELED"
     PendingCancel = "PENDING_CANCEL"
     Rejected = "REJECTED"
-    EXPIRED = "EXPIRED"
+    Expired = "EXPIRED"
