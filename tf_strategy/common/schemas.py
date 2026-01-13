@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Any, get_args
+from typing import Any, get_args, Literal
 
 from pydantic import (
     BaseModel,
@@ -141,6 +141,61 @@ class Order(BaseModel):
             raise ValueError("In a market order field time_in_force must be None")
 
         return values
+    
+
+class OrderOCO(BaseModel):
+    symbol: Symbol
+    side: Side
+    quantity: Decimal
+    
+    # Above leg
+    above_type: type
+    above_stop_price: Decimal
+    above_price: Decimal | None = None
+    above_time_in_force: TimeInForce = Field(default=TimeInForce.GTC)
+    
+    # Below leg
+    below_type: type
+    below_stop_price: Decimal
+    below_price: Decimal | None = None
+    below_time_in_force: TimeInForce = Field(default=TimeInForce.GTC)
+
+    # Optional parameters
+    list_client_order_id: str | None = None
+    above_client_order_id: str | None = None
+    below_client_order_id: str | None = None
+    
+    @model_validator(mode="after")
+    def validate_oco_order(self):
+        """Validate OCO order"""
+        
+        # 1. Check order types
+        limit_types = {Type.TakeProfitLimit, Type.StopLossLimit}
+
+        # 2.1. Check prices
+        if not (self.above_stop_price > self.below_stop_price):
+            raise ValueError("above_stop_price must be greater than below_stop_price")
+        
+        # 2.2. Check required price for *_LIMIT
+        if self.above_type in limit_types and self.above_price is None:
+            raise ValueError(f"above_price is required for {str(self.above_type)}")
+        
+        if self.below_type in limit_types and self.below_price is None:
+            raise ValueError(f"below_price is required for {str(self.below_type)}")
+
+        if (
+            self.above_type in limit_types 
+            and self.below_type in limit_types
+            and self.above_price and self.below_price
+            and not (self.above_price > self.below_price)
+        ):
+            raise ValueError("above_price must be greater than below_price")
+        
+        # 3. Check positive values
+        if self.quantity <= 0:
+            raise ValueError("quantity must be greater than 0")
+        
+        return self
 
 
 class PartialyFill(BaseModel):
