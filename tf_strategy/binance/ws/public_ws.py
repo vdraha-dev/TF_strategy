@@ -272,7 +272,7 @@ class BinancePublicWS:
         subscr_key = WSKeyCreator.kline_key(msg["s"].lower(), msg["k"]["i"])
         await self._subscriptions[subscr_key].emit(
             symbol=msg["s"],
-            time_interval=msg["k"]["i"],
+            time_interval=TimeInterval(msg["k"]["i"]),
             kline=Kline.model_validate(msg["k"]),
             is_closed=msg["k"]["x"],
         )
