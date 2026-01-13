@@ -31,7 +31,6 @@ class Type(StrEnum):
     StopLossLimit = "STOP_LOSS_LIMIT"
     TakeProfit = "TAKE_PROFIT"
     TakeProfitLimit = "TAKE_PROFIT_LIMIT"
-    LimitMaker = "LIMIT_MAKER"
 
     @property
     def requires_price(self) -> bool:
@@ -39,7 +38,6 @@ class Type(StrEnum):
             Type.Limit,
             Type.StopLossLimit,
             Type.TakeProfitLimit,
-            Type.LimitMaker,
         }
 
 
