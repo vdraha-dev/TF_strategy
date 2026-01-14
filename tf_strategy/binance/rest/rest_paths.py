@@ -27,6 +27,11 @@ class PrivateSubPath(BaseModel):
 
     @computed_field
     @property
+    def oco_order(self) -> str:
+        return f"/api/{self.version}/orderList/oco"
+
+    @computed_field
+    @property
     def open_orders(self) -> str:
         return f"/api/{self.version}/openOrders"
 

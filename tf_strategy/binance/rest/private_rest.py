@@ -6,7 +6,14 @@ import httpx
 import orjson
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 
-from tf_strategy.binance.schemas import CancelOrder, Order, OrderReport, Symbol, Wallet
+from tf_strategy.binance.schemas import (
+    CancelOrder,
+    Order,
+    OrderOCO,
+    OrderReport,
+    Symbol,
+    Wallet,
+)
 from tf_strategy.common.tools import get_signed_payload
 
 from .rest_paths import rest_path
@@ -140,6 +147,48 @@ class BinancePrivateREST:
         raw = orjson.loads(resp.content)
         report = OrderReport.model_validate(raw)
         return report
+
+    async def send_oco_order(
+        self, order: OrderOCO
+    ) -> tuple[OrderReport, OrderReport] | None:
+        """
+        Send an OCO (One-Cancels-Other) order to the exchange.
+
+        This method signs and sends an OCO order request to the private REST API.
+        If the request is successful, the response is validated and converted
+        into a tuple of `OrderReport` models. In case of an HTTP error, the error is
+        logged and `None` is returned.
+
+        Args:
+            order (OrderOCO):
+                The OCO order object containing all required order parameters.
+
+        Returns:
+            (tuple[OrderReport, OrderReport] | None):
+                A tuple of validated order reports if the request succeeds,
+                otherwise `None` if an error occurs.
+        """
+        try:
+            resp = await self._http_client.post(
+                url=rest_path.private.oco_order,
+                params=get_signed_payload(
+                    self._private_key,
+                    {
+                        **OrderOCO.create_oco_payload(order),
+                        "timestamp": int(time.time() * 1000),
+                    },
+                ),
+            )
+
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to send OCO order: {str(e)}")
+            return None
+
+        raw = orjson.loads(resp.content)
+        report1 = OrderReport.model_validate(raw["orderReports"][0])
+        report2 = OrderReport.model_validate(raw["orderReports"][1])
+        return (report1, report2)
 
     async def get_open_orders(
         self, symbol: Symbol | None = None

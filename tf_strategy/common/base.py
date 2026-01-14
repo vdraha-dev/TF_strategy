@@ -7,6 +7,7 @@ from tf_strategy.common.schemas import (
     CancelOrder,
     Kline,
     Order,
+    OrderOCO,
     OrderReport,
     Symbol,
     Wallet,
@@ -68,6 +69,22 @@ class ConnectorBase(ABC):
 
         Returns:
             OrderReport | None: The validated order report if the request succeeds,
+                otherwise None if an error occurs.
+        """
+        ...
+
+    @abstractmethod
+    async def send_oco_order(
+        self, order: OrderOCO
+    ) -> tuple[OrderReport, OrderReport] | None:
+        """
+        Send an OCO (One-Cancels-Other) order to the exchange.
+
+        Args:
+            order (OrderOCO): The OCO order object containing all required order parameters.
+
+        Returns:
+            tuple[OrderReport, OrderReport] | None: A tuple of validated order reports if the request succeeds,
                 otherwise None if an error occurs.
         """
         ...

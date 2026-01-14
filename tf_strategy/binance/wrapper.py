@@ -9,6 +9,7 @@ from tf_strategy.common.schemas import (
     ConnectorConfig,
     Kline,
     Order,
+    OrderOCO,
     OrderReport,
     Symbol,
     Wallet,
@@ -164,6 +165,29 @@ class BinanceWrapper(ConnectorBase):
                 otherwise `None` if an error occurs.
         """
         response = await self._private_rest.send_order(order)
+        return response
+
+    async def send_oco_order(
+        self, order: OrderOCO
+    ) -> tuple[OrderReport, OrderReport] | None:
+        """
+        Send an OCO (One-Cancels-Other) order to the exchange.
+
+        This method signs and sends an OCO order request to the private REST API.
+        If the request is successful, the response is validated and converted
+        into a tuple of `OrderReport` models. In case of an HTTP error, the error is
+        logged and `None` is returned.
+
+        Args:
+            order (OrderOCO):
+                The OCO order object containing all required order parameters.
+
+        Returns:
+            (tuple[OrderReport, OrderReport] | None):
+                A tuple of validated order reports if the request succeeds,
+                otherwise `None` if an error occurs.
+        """
+        response = await self._private_rest.send_oco_order(order)
         return response
 
     async def cancel_order(self, order: CancelOrder) -> OrderReport:
