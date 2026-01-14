@@ -8,11 +8,11 @@ from tf_strategy.common.schemas import BalanceForAsset as CommonBalanceForAsset
 from tf_strategy.common.schemas import CancelOrder as CommonCancelOrder
 from tf_strategy.common.schemas import Kline as CommonKline
 from tf_strategy.common.schemas import Order as CommonOrder
+from tf_strategy.common.schemas import OrderOCO as CommonOrderOCO
 from tf_strategy.common.schemas import OrderReport as CommonOrderReport
 from tf_strategy.common.schemas import PartialyFill as CommonPartialyFill
 from tf_strategy.common.schemas import Symbol as CommonSymbol
 from tf_strategy.common.schemas import Wallet as CommonWallet
-from tf_strategy.common.schemas import OrderOCO as CommonOrderOCO
 
 
 class Symbol(CommonSymbol):
@@ -110,10 +110,11 @@ class Order(CommonOrder):
             payload["stopPrice"] = self.stop_price
 
         return payload
-    
+
 
 class OrderOCO(CommonOrderOCO):
     """Binance OrderOCO"""
+
     @classmethod
     def create_oco_payload(cls, order: CommonOrderOCO) -> dict:
         payload = {
@@ -132,6 +133,7 @@ class OrderOCO(CommonOrderOCO):
         }
 
         return {k: v for k, v in payload.items() if v is not None}
+
 
 class PartialyFill(CommonPartialyFill):
     """Binance PartialyFill"""
