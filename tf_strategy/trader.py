@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from typing import Any
 
 import pandas as pd
@@ -183,12 +183,12 @@ class Trader:
                                 above_price=(
                                     order_report.price
                                     * (1 + worker_data.config.take_profit)
-                                ).quantize(Decimal("0.000000")),
+                                ).quantize(Decimal("0.000000"), rounding=ROUND_DOWN),
                                 below_type=Type.StopLoss,
                                 below_price=(
                                     order_report.price
                                     * (1 - worker_data.config.stop_loss)
-                                ).quantize(Decimal("0.000000")),
+                                ).quantize(Decimal("0.000000"), rounding=ROUND_DOWN),
                             )
                         )
 
@@ -264,7 +264,7 @@ class Trader:
 
         # make subscription on kline updates
         candle_subscribe = await worker_data.connector.kline_subscribe(
-            symbol=config.symbol, interval=timeframe, callback=process_position
+            symbol=config.symbol, time_interval=timeframe, callback=process_position
         )
         worker_data.extra["kline_subscribe"] = candle_subscribe
 
@@ -273,7 +273,7 @@ class Trader:
 
         # make other subscriptions if needed
         order_update = await worker_data.connector.orders_subscribe(
-            callback=process_position
+            handler=process_position
         )
         worker_data.extra["open_orders"] = order_update
 
@@ -296,13 +296,13 @@ class Trader:
         # unsubscribe from kline updates
         if "kline_subscribe" in worker_data.extra:
             await worker_data.connector.kline_unsubscribe(
-                subscription_token=worker_data.extra["kline_subscribe"]
+                handler_token=worker_data.extra["kline_subscribe"]
             )
 
         # unsubscribe from order updates
         if "open_orders" in worker_data.extra:
             await worker_data.connector.orders_unsubscribe(
-                subscription_token=worker_data.extra["open_orders"]
+                handler_token=worker_data.extra["open_orders"]
             )
 
         # remove the worker from registry
