@@ -152,13 +152,13 @@ class OrderOCO(BaseModel):
     above_type: type
     above_stop_price: Decimal
     above_price: Decimal | None = None
-    above_time_in_force: TimeInForce = Field(default=TimeInForce.GTC)
+    above_time_in_force: TimeInForce | None = None
 
     # Below leg
     below_type: type
     below_stop_price: Decimal
     below_price: Decimal | None = None
-    below_time_in_force: TimeInForce = Field(default=TimeInForce.GTC)
+    below_time_in_force: TimeInForce | None = None
 
     # Optional parameters
     list_client_order_id: str | None = None
