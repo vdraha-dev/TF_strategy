@@ -4,6 +4,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from tf_strategy.binance.wrapper import BinanceWrapper
+from tf_strategy.common.base import ConnectorBase
 from tf_strategy.common.enums import Status, TimeInterval, Type
 from tf_strategy.common.schemas import Kline, OrderReport, Symbol
 from tf_strategy.strategy.base import BaseStrategy, TradeSignal
@@ -72,7 +73,7 @@ class Trader:
         self,
         strategy: BaseStrategy,
         config: TradeConfig,
-        connector: BinanceWrapper,
+        connector: ConnectorBase,
         timeframe: TimeInterval,
     ) -> str:
         """Create and register a new strategy worker.

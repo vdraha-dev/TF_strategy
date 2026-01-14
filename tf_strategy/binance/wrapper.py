@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from tf_strategy.common.async_event import AsyncHandler
+from tf_strategy.common.base import ConnectorBase
 from tf_strategy.common.enums import Status, TimeInterval
 from tf_strategy.common.schemas import (
     BalanceForAsset,
@@ -19,7 +20,7 @@ from .ws.private_ws import BinancePrivateWS
 from .ws.public_ws import BinancePublicWS
 
 
-class BinanceWrapper:
+class BinanceWrapper(ConnectorBase):
     def __init__(self, config: ConnectorConfig, reconnect_delay: float = 5):
         """
         Initialize Binance exchange wrapper.
