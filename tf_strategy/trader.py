@@ -1,3 +1,5 @@
+import logging
+from decimal import Decimal
 from typing import Any
 
 import pandas as pd
@@ -6,8 +8,17 @@ from pydantic import BaseModel, Field
 from tf_strategy.binance.wrapper import BinanceWrapper
 from tf_strategy.common.base import ConnectorBase
 from tf_strategy.common.enums import Status, TimeInterval, Type
-from tf_strategy.common.schemas import Kline, OrderReport, Symbol
+from tf_strategy.common.schemas import (
+    CancelOrder,
+    Kline,
+    Order,
+    OrderOCO,
+    OrderReport,
+    Symbol,
+)
 from tf_strategy.strategy.base import BaseStrategy, TradeSignal
+
+logger = logging.getLogger(__name__)
 
 
 class TradeConfig(BaseModel):
@@ -16,14 +27,16 @@ class TradeConfig(BaseModel):
     Attributes:
         symbol: The trading pair (e.g., BTCUSDT).
         max_open_positions: Maximum number of concurrent positions allowed.
+        quantity: Quantity to trade per position.
         stop_loss: Stop loss percentage as a decimal (e.g., 0.02 for 2%).
         take_profit: Take profit percentage as a decimal (e.g., 0.05 for 5%).
     """
 
     symbol: Symbol
     max_open_positions: int
-    stop_loss: float
-    take_profit: float
+    quantity: Decimal
+    stop_loss: Decimal
+    take_profit: Decimal
 
 
 class OpenPosition(BaseModel):
@@ -143,11 +156,92 @@ class Trader:
 
                 # check for trading signal
                 if strategy.get_last_signal() == TradeSignal.OpenPosition:
-                    if worker_data.config.max_open_positions >= len(
-                        worker_data.open_positions
+                    if (
+                        len(worker_data.open_positions)
+                        >= worker_data.config.max_open_positions
                     ):
+                        # do nothing if max open positions reached
                         return
-                    pass
+
+                    order_report = await worker_data.connector.send_order(
+                        Order(
+                            symbol=worker_data.config.symbol,
+                            type=Type.Market,
+                            side="BUY",
+                            quantity=worker_data.config.quantity,  # example fixed quantity
+                        )
+                    )
+
+                    if order_report and order_report.status == Status.Filled:
+                        oco_report = await worker_data.connector.send_oco_order(
+                            OrderOCO(
+                                symbol=worker_data.config.symbol,
+                                side="SELL",
+                                quantity=order_report.executed_qty,
+                                above_type=Type.TakeProfit,
+                                # TODO: need add quantize to connector information about symbol price precision
+                                above_price=(
+                                    order_report.price
+                                    * (1 + worker_data.config.take_profit)
+                                ).quantize(Decimal("0.000000")),
+                                below_type=Type.StopLoss,
+                                below_price=(
+                                    order_report.price
+                                    * (1 - worker_data.config.stop_loss)
+                                ).quantize(Decimal("0.000000")),
+                            )
+                        )
+
+                        if oco_report:
+                            # save open position with associated orders
+                            worker_data.open_positions.append(
+                                OpenPosition(
+                                    open_position=order_report,
+                                    take_profit=(
+                                        oco_report[0]
+                                        if oco_report[0].type == Type.TakeProfit
+                                        else oco_report[1]
+                                    ),
+                                    stop_loss=(
+                                        oco_report[0]
+                                        if oco_report[0].type == Type.StopLoss
+                                        else oco_report[1]
+                                    ),
+                                )
+                            )
+                        else:
+                            # immediate close position if oco order failed
+                            cancel_report = await worker_data.connector.cancel_order(
+                                CancelOrder(
+                                    symbol=worker_data.config.symbol,
+                                    order_id=order_report.order_id,
+                                )
+                            )
+
+                            if (
+                                cancel_report
+                                and cancel_report.status == Status.Canceled
+                            ):
+                                logger.info(
+                                    "Position closed due to OCO order failure",
+                                    extra={
+                                        "connector": "TODO: add `name` for connector"
+                                    },
+                                )
+                            else:
+                                logger.error(
+                                    "Failed to close position after OCO order failure",
+                                    extra={
+                                        "connector": "TODO: add `name` for connector"
+                                    },
+                                )
+                    else:
+                        # TODO: add `name` for connector
+                        logger.error(
+                            "Failed to open position: Order not filled",
+                            extra={"connector": "TODO: add `name` for connector"},
+                        )
+                        pass
 
             elif order_report := kwargs.get("order_report"):
                 order_report: OrderReport
